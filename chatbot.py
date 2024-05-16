@@ -1,62 +1,79 @@
-import nltk
-from nltk.chat.util import Chat, reflections
-from transformers import pipeline
+import tkinter as tk
+from tkinter import scrolledtext, INSERT
+from textblob import TextBlob
+import re
 
-# Ensure you have the necessary NLTK data files
-nltk.download('punkt')
-
-# Define pairs of patterns and responses
-pairs = [
-    (r"my name is (.*)", ["Hello %1, How are you today?"]),
-    (r"hi|hey|hello", ["Hello", "Hey there"]),
-    (r"what is your name?", ["I am a chatbot created by you"]),
-    (r"how are you?", ["I'm doing good, thank you!", "I'm fine, thank you. How can I assist you today?"]),
-    (r"sorry (.*)", ["It's okay", "No problem"]),
-    (r"(.*) age?", ["I am a computer program, so I don't have an age"]),
+# Define patterns and corresponding responses
+patterns_responses = [
+    (r"\bhi\b|\bhey\b|\bhello\b", ["Hello!", "Hi there!", "Hey!"]),
+    (r"my name is (.*)", ["Hello {}, nice to meet you!", "Hi {}, how can I help you?"]),
+    (r"what is your name?", ["I'm a chatbot!", "My name is Chatbot."]),
+    (r"how are you?", ["I'm doing well, thank you!", "I'm great!"]),
+    (r"sorry (.*)", ["It's okay!", "No problem."]),
     (r"quit", ["Bye, take care!"]),
 ]
 
-# Create Chat object with predefined pairs
-chatbot = Chat(pairs, reflections)
+# Function to match user input with patterns and provide response
+def chatbot_response(user_input):
+    response = None
 
-# Initialize sentiment analysis pipeline
-# Initialize sentiment analysis pipeline
-sentiment_analysis = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english', revision='af0f99b')
+    # Check if the user wants to quit
+    if user_input.lower() == 'quit':
+        return "Bye, take care!"
 
+    # Iterate through patterns and responses
+    for pattern, responses in patterns_responses:
+        match = re.match(pattern, user_input, re.IGNORECASE)
+        if match:
+            response = responses[0].format(*match.groups())
+            return response
 
-# Function to detect emotion using transformers
-def detect_emotion(text):
-    result = sentiment_analysis(text)[0]
-    label = result['label']
-    if label == 'POSITIVE':
-        return "positive"
-    elif label == 'NEGATIVE':
-        return "negative"
+    # Perform sentiment analysis if no predefined response matches
+    sentiment = TextBlob(user_input).sentiment.polarity
+    if sentiment > 0:
+        response = "That's great to hear!"
+    elif sentiment < 0:
+        response = "I'm sorry to hear that."
     else:
-        return "neutral"
+        response = "I'm not sure how to respond. Can you please rephrase?"
 
-# Function to get chatbot response
-def chatbot_response(text):
-    emotion = detect_emotion(text)
-    if emotion == "positive":
-        return "That's great to hear!"
-    elif emotion == "negative":
-        return "I'm sorry to hear that. How can I help you?"
-    else:
-        # If the sentiment is neutral, use predefined responses
-        response = chatbot.respond(text)
-        if response:
-            return response[0]
-        else:
-            # If no predefined response is matched, provide a generic response
-            return "I'm not sure how to respond. Can you please rephrase?"
+    return response
 
-if __name__ == "__main__":
-    print("Hi, I'm your chatbot. Type something to start a conversation. Type 'quit' to end the chat.")
-    while True:
-        user_input = input("You: ")
-        if user_input.lower() == 'quit':
-            print("Chatbot: Bye, take care!")
-            break
-        response = chatbot_response(user_input)
-        print(f"Chatbot: {response}")
+# Function to handle user input and display chatbot responses
+def send_message(event=None):
+    user_input = entry.get()
+    if user_input:
+        conversation.config(state=tk.NORMAL)
+        conversation.insert(tk.END, "You: " + user_input + "\n", "user")
+        conversation.insert(tk.END, "Chatbot: " + chatbot_response(user_input) + "\n", "chatbot")
+        conversation.see(INSERT)
+        conversation.config(state=tk.DISABLED)
+        entry.delete(0, tk.END)
+
+# Create main window
+root = tk.Tk()
+root.title("Chatbot")
+
+# Set background color and window size
+root.configure(bg="#f2f2f2")
+root.geometry("500x500")
+
+# Create conversation display
+conversation = scrolledtext.ScrolledText(root, width=50, height=20, state=tk.DISABLED, bg="#fff", font=("Arial", 12))
+conversation.tag_config("user", foreground="#003366", font=("Arial", 12, "bold"))
+conversation.tag_config("chatbot", foreground="#006600", font=("Arial", 12, "italic"))
+conversation.pack(pady=10)
+
+# Create input field
+entry = tk.Entry(root, width=40, bg="#fff", font=("Arial", 12))
+entry.pack(side=tk.LEFT, padx=10)
+
+# Create send button
+send_button = tk.Button(root, text="Send", command=send_message, bg="#4CAF50", fg="white", font=("Arial", 12, "bold"), padx=20, pady=10, bd=0)
+send_button.pack(side=tk.RIGHT, padx=10)
+
+# Bind Enter key to send message
+root.bind('<Return>', send_message)
+
+# Start the GUI
+root.mainloop()
