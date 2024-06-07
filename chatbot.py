@@ -46,10 +46,11 @@ def chatbot_response(user_input, user_id):
     else:
         response = "That sounds really tough. I'm here for you."
 
-    # Insert user feedback and emotion data into the database
-    insert_query = "INSERT INTO user_feedback (user_id, feedback_text, emotion_score) VALUES (%s, %s, %s)"
-    cursor.execute(insert_query, (user_id, user_input, sentiment))
-    connection.commit()
+    # Insert user feedback and emotion data into the database if the input reflects a sentiment
+    if sentiment != 0:
+        insert_query = "INSERT INTO user_feedback (user_id, feedback_text, emotion_score) VALUES (%s, %s, %s)"
+        cursor.execute(insert_query, (user_id, user_input, sentiment))
+        connection.commit()
 
     return response
 
@@ -74,7 +75,7 @@ root.configure(bg="#f2f2f2")
 root.geometry("500x500")
 
 # Create conversation display
-conversation = scrolledtext.ScrolledText(root, width=50, height=20, state=tk.DISABLED, bg="#fff", font=("Arial", 12))
+conversation = scrolledtext.ScrolledText(root, width=70, height=20, state=tk.DISABLED, bg="#fff", font=("Arial", 12))
 conversation.tag_config("user", foreground="#003366", font=("Arial", 12, "bold"))
 conversation.tag_config("chatbot", foreground="#006600", font=("Arial", 12, "italic"))
 conversation.pack(pady=10)
@@ -93,5 +94,18 @@ root.bind('<Return>', send_message)
 # Sample user_id for testing
 user_id = 1
 
+# Function to display the chatbot's introductory message
+def display_intro_message():
+    intro_message = ("Hello! I'm a chatbot here to assist you. "
+                     "You can ask me anything, share how you're feeling, "
+                     "or simply chat with me. How can I help you today?")
+    conversation.config(state=tk.NORMAL)
+    conversation.insert(tk.END, "Chatbot: " + intro_message + "\n", "chatbot")
+    conversation.config(state=tk.DISABLED)
+
+# Display the introductory message when the GUI starts
+display_intro_message()
+
 # Start the GUI
 root.mainloop()
+
